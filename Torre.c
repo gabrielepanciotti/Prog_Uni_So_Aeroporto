@@ -1,11 +1,8 @@
 #include <sys/socket.h>
 #include <sys/un.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <stdbool.h>
 #include <pthread.h>
 #include "richiesta.h"
 
@@ -16,7 +13,7 @@ bool pista_decollo[NUM_PISTE]; //true=libera, false=occupata
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t condition = PTHREAD_COND_INITIALIZER;
-
+int fd;
 char* curr_time;
 
 /* Ho pensato di usare i semafori ma dato che sono due piste, non saprei come metterlo in attesa di tutti e due i semafori in contemporanea,
@@ -43,7 +40,8 @@ void fineAerei(int n_richieste){//Ricevuta notifica con pipe named da Hangar del
 	exit(0);
 }
 
-void gestionDecollo_Thread(char* args){
+void* gestioneDecollo_Thread(void* args){
+
 	/* RICERCA FUORI DA SEZIONE CRITICA
 	do {
 		pista_libera = ricercaPistaLibera();
@@ -89,11 +87,11 @@ void gestionDecollo_Thread(char* args){
 	int pista_libera=-1;
 	
 	//Scompongo la stringa args per riprendere i due parametri
-	nome_aereo = strtok(args, ";")
-	my_sock_path = strtok(NULL, ";")
+	char* nome_aereo = strtok(args, ";");
+	char* my_sock_path = strtok(NULL, ";");
 
-	char nome_processo_thread[20];
-	sprintf(nome_processo_thread,"%s_%s",nome_processo,nome_aereo)
+	char* nome_processo_thread;
+	sprintf(nome_processo_thread,"%s_%s",nome_processo,nome_aereo);
 	
 	
 	//Ripete la ricerca fino a quando non trova una pista libera
@@ -116,9 +114,10 @@ void gestionDecollo_Thread(char* args){
 	
 	//Invia autorizzazione decollo con la pista da cui decollare all'aereo richiedente aprendo una connesione Socket
 	int sfd;
-	struct sockaddr_un sun, sAereo;
+	struct sockaddr_un sun = {AF_UNIX, *my_sock_path};
 	socklen_t sockT;
-	char cBuffer[MAX_BUFFER_LEN];
+	char sBuffer[MAX_BUFFER_LEN];
+	int iBytesRead;
 	
 	if((sfd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
 		handle_error("socket");
@@ -126,22 +125,18 @@ void gestionDecollo_Thread(char* args){
 	//Si connette tramite socket all'aereo, si è sicuri che va a connettersi con l'aereo che ha fatto la richiesta in quanto viene passato il percorso del sock
 	// dell'aereo tramite la notifica di decollo
 	memset(&sun,'\0',sizeof(sun));
-	sun.sun_family = AF_UNIX;
-	strcpy(sun.sun_path, my_sock_path);
-	if(connect(sfd,(struct sockaddr *)&sun, sizeof(sun)) == -1))
+	if(connect(sfd,(struct sockaddr *)&sun, sizeof(sun)) == -1)
 		handle_error("bind");
 	
 	//Invia ad aereo messaggio di autorizzazione decollo
 	strcpy(sBuffer,"Autorizzazione");
 	if(write(sfd, sBuffer, strlen(sBuffer)) ==-1)
-		handle_error("write")
+		handle_error("write");
 	
 	//Invia un altro messaggio con la pista dove decollare
-	char n_pista[4];
-	itoa(pista_libera,n_pista,10);	
-	strcpy(sBuffer,n_pista);
+	sprintf(sBuffer,"%d",pista_libera);	
 	if(write(sfd, sBuffer, strlen(sBuffer)) ==-1)
-		handle_error("write")
+		handle_error("write");
 	
 	//Si mette in attesa della notifica di fine decollo
 	memset(sBuffer, 0, sizeof(sBuffer));
@@ -154,17 +149,17 @@ void gestionDecollo_Thread(char* args){
 		pthread_mutex_unlock(&mutex);
 		
 		curr_time=getTime();
-		printf("%s , %s : Notifica fine decollo aereo numero: %s\n", time, nome_processo_thread, nome_aereo);
-		printf("%s , %s : Pista liberata: %d\n", time, nome_processo_thread, pista_decollo[pista_libera]);
+		printf("%s , %s : Notifica fine decollo aereo numero: %s\n", curr_time, nome_processo_thread, nome_aereo);
+		printf("%s , %s : Pista liberata: %d\n", curr_time, nome_processo_thread, pista_decollo[pista_libera]);
 	}
 	else{
-		printf("Ricevuto messaggio non previsto, chiusura connessione e thread")
+		printf("Ricevuto messaggio non previsto, chiusura connessione e thread");
 	}
 	
 	//Chiusura socket con aereo per comunicazioni decollo aereo
 	close(sfd);
 	//Chiusura thread Torre per gestione decollo aereo
-	pthread_exit((0);
+	pthread_exit(0);
 }
 
 //Concede l'autorizzazione ad un certo aereo di decollare e gli assegna una pista di decollo
@@ -174,12 +169,12 @@ void autorizzaDecollo(char* nome_aereo, char* sock_path){
 	int rc = 0;
 	
 	char* parametri;
-	sprintf(parametri, "%s;%s", nome_aereo, sock_path)
+	sprintf(parametri, "%s;%s", nome_aereo, sock_path);
 	
-	rc = pthread_create(&tid, NULL, &gestioneDecollo_Thread, (void *)&parametri);
+	rc = pthread_create(&tid, NULL, &gestioneDecollo_Thread, (void *) &parametri);
 	checkResults("pthread_create()\n", rc); 
 	
-	printf("Created thread %d\n", i + 1);
+	printf("Created thread \n");
 	pthread_detach(tid);
 	
 	/*2 opzione: RICERCA DELLA PISTA LIBERA DA MAIN E THREAD IN ATTESA DI CONDIZIONE, COME LO INFORMO DELLA PISTA LIBERA?
@@ -216,20 +211,21 @@ int processaRichieste(){
 	//Apre pipe per richieste di decollo da gli aerei
 	fd = open(MYPIPE, O_RDONLY);
 	
-	stNotifica.tipo = '\0';
+	strcpy(stNotifica.tipo,"init");
 	int n_richieste=0;
 	int wstatus;
-	
+	int iReadCount;
 	while(strcmp(stNotifica.tipo, "fineAerei") == 0) {
-		if((iReadCount = read(fd, &stNotifica, sizeof(stNotifica)) == -1) {
+		if((iReadCount = read(fd, &stNotifica, sizeof(stNotifica))) == -1) {
 			perror("Torre: Errore in read");
 			return 1;
 		}
 		else{
 			if(strcmp(stNotifica.tipo, "richiestaDecollo") == 0){
 				curr_time=getTime();
-				printf(("%s , %s : Richiesta n. %d \nTipo: %s \nId mittente: %s \n", curr_time, nome_processo, n_richieste, stNotifica.tipo, stNotifica.id);
+				printf("%s , %s : Richiesta n. %d \nTipo: %s \nId mittente: %s \n", curr_time, nome_processo, n_richieste, stNotifica.tipo, stNotifica.id);
 				autorizzaDecollo(stNotifica.id,stNotifica.my_sock_path);
+				n_richieste++;
 				/* Implementazione precedente creando un nuovo processo
 				richiesta[n_richieste]=fork();
 				if (richiesta[n_richieste] < 0) { // error occurred 
@@ -243,11 +239,11 @@ int processaRichieste(){
 					autorizzaDecollo(stNotifica.id,stNotifica.my_sock_path);
 				}
 				*/
-				n_richieste++;
+				
 			}
 		}	
 	}
-	close(fd);
+	
 	/* Aspetto che tutti i figli di Torre siano terminati, ma non serve basta la notifica di fine aerei (con previa verifica di termine processo Aerei)
 	for(int i=0;i<n_richieste;i++){
 		waitpid(richiesta[i], &wstatus, 0);
@@ -255,15 +251,19 @@ int processaRichieste(){
 			sleep(1);s
 	}
 	*/
+	close(fd);
 	return n_richieste;	
 }
 
 int main(int argc, char *argv[]){
+	int n_richieste;
+	char *curr_time;
 	
 	//Inizializzo tutte le piste a libere
-	for(int i=0;i<NUM_PISTE;i++){
+	printf("%s , %s : Numero piste di decollo aperte: %d \n", curr_time, nome_processo, NUM_PISTE);
+	for (int i=0;i<NUM_PISTE;i++){
 		pista_decollo[i]=true;	
 	}
-	int n_richieste=processaRichieste();
+	n_richieste=processaRichieste();
 	fineAerei(n_richieste);
 }

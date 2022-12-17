@@ -1,22 +1,33 @@
 #include <stdlib.h>
 #include <stdio.h> 
-#include <conio.h> 
+#include <unistd.h>
 #include <time.h>
+#include <errno.h>
+#include <string.h>
+#include <fcntl.h>
+
+#ifndef MYHEADER_H_
+#define MYHEADER_H_
+
+char* getTime(); // only put declaration in headers
+int get_random(int min, int max);
 
 #define MYPIPE "/tmp/myfifo"
 #define MY_SOCK_PATH "/tmp/my_socket"
-#define LISTEN_BACKLOG 50   /* The  backlog  argument defines the maximum length to which the queue of pending connections 
-							   for sockfd may grow.  If a connection request arrives  when  the  queue  is
-							   full,  the client may receive an error with an indication of ECONNREFUSED or, if the
-							   underlying protocol supports retransmission, the request may be ignored  so  that  a
-							   later reattempt at connection succeeds. */
+#define LISTEN_BACKLOG 50
 #define MAX_BUFFER_LEN	256
 #define PORT			5152
 #define NET_ADDRESS		"10.0.2.15"
 
 #define handle_error(msg) \
    do { printf("errno = %d\n", errno); perror(msg); exit(EXIT_FAILURE); } while (0)
- 
+
+#define checkResults(string,val) \
+	if(val){printf("Failed");exit(1);} 
+
+#endif
+
+
 //Struttura dati per richieste, primo campo per tipo richiesta, secondo per id mittente
 struct tNotifica {
 	char tipo[20];
@@ -24,15 +35,4 @@ struct tNotifica {
 	char my_sock_path[30];
 };
 
-char* getTime(){
-	time_t rawtime;
-	struct tm * timeinfo;
-	time(&rawtime);
-	char* curr_time = asctime(localtime(&rawtime));
-	return curr_time;
-}
 
-int get_random(int min, int max) {
-	int num = rand() % max + min; 
-	return num; 
-}
