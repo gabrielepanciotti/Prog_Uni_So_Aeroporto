@@ -26,8 +26,6 @@ int get_random(int min, int max);
 struct tNotifica {
 	char tipo[32];
 	long num;
-	char id[16];
-	char my_sock_path[32];
 };
 
 

@@ -14,6 +14,7 @@ void creazioneAerei(){
 	char *curr_time;
 	char num[32];
 	int x = 0;
+
 	for(int i=0;i<NUM_AEREI;i++){
 		curr_time=getTime();
 		printf("%s , %s : Creazione aereo numero: %d\n", curr_time, nome_processo, i+1);
@@ -59,8 +60,6 @@ void notificaFineAerei(int fd){ //Attende la fine di tutti i processi Aereo e no
 	printf("====================\n");
 	//Setto i parametri della notifica
 	strcpy(stNotifica.tipo,"fineAerei");
-	strcpy(stNotifica.id,nome_processo);
-	strcpy(stNotifica.my_sock_path,"init");
 	stNotifica.num = -1;
 	//Invia messaggio di fine decolli nella pipe e la chiude
     	write(fd, &stNotifica, sizeof(stNotifica));

@@ -42,26 +42,23 @@ void fineAerei(int n_richieste){//Ricevuta notifica con pipe named da Hangar del
 }
 
 void *gestioneDecollo_Thread(void* num_aereo){
-	int pista_libera=-1;
-	char* curr_time;
-	char nome_aereo[16];
-	char my_sock_path[32];
-	char nome_processo_thread[32];
-	
-	
-	//Scompongo la stringa args per riprendere i due parametri
-	sprintf(nome_aereo, "%s%ld", "Aereo", (long)num_aereo);
-	sprintf(my_sock_path, "%s%ld", "/tmp/socket_Aereo", (long)num_aereo);
-	
 	int sfd;
 	struct sockaddr_un sun;
 	socklen_t sockT;
 	char sBuffer[MAX_BUFFER_LEN];
 	int iBytesRead;
+	char* curr_time;
+
+	int pista_libera=-1;
+	char nome_aereo[16];
+	char my_sock_path[32];
+	char nome_processo_thread[32];
 	
-	
-	
+	//Tramite il numero dell'aereo ricava il nome e il socket con cui comunicare per la gestione del decollo
+	sprintf(nome_aereo, "%s%ld", "Aereo", (long)num_aereo);
+	sprintf(my_sock_path, "%s%ld", "/tmp/socket_Aereo", (long)num_aereo);
 	sprintf(nome_processo_thread,"%s_%s",nome_processo,nome_aereo);
+
 	//Ripete la ricerca fino a quando non trova una pista libera
 	printf("====================\n");
 	curr_time=getTime();
@@ -97,7 +94,7 @@ void *gestioneDecollo_Thread(void* num_aereo){
 	
 	curr_time=getTime();
 	printf("%s , %s : SOCK PATH : %s\n", curr_time, nome_processo_thread, my_sock_path);
-	//Si connette tramite socket all'aereo, si è sicuri che va a connettersi con l'aereo che ha fatto la richiesta in quanto viene passato il percorso del sock
+	//Si connette tramite socket all'aereo, si ï¿½ sicuri che va a connettersi con l'aereo che ha fatto la richiesta in quanto viene passato il percorso del sock
 	// dell'aereo tramite la notifica di decollo
 	//memset(&sun,'\0',sizeof(sun));
 	if(connect(sfd,(struct sockaddr *)&sun, sizeof(sun)) == -1)
@@ -152,7 +149,7 @@ void autorizzaDecollo(long num_aereo){
 	int rc = 0;
 	
 	rc = pthread_create(&tid[n], NULL, &gestioneDecollo_Thread, (void *)num_aereo);
-	//Fa il detach del thread così che il main thread può continuare a processare le altre richieste
+	//Fa il detach del thread cosï¿½ che il main thread puï¿½ continuare a processare le altre richieste
 	pthread_detach(tid[n]); 
 	n++;
 	
@@ -176,7 +173,7 @@ int processaRichieste(int fd){
 			if(strcmp(stNotifica.tipo, "richiestaDecollo") == 0){
 				curr_time=getTime();
 				printf("====================\n");
-				printf("%s , %s : Richiesta n. %d | Tipo: %s \nId: %s | Socket: %s\n", curr_time, nome_processo, n_richieste, stNotifica.tipo, stNotifica.id, stNotifica.my_sock_path);
+				printf("%s , %s : Richiesta n. %d | Tipo: %s \nId: Aereo%ld | Socket: /tmp/socket_Aereo%ld\n", curr_time, nome_processo, n_richieste, stNotifica.tipo, stNotifica.num, stNotifica.num);
 				printf("====================\n");
 				
 				autorizzaDecollo(stNotifica.num);
