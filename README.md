@@ -37,3 +37,6 @@ Per eseguire da Linux:
 2. Aprire bash sulla cartella
 3. sudo chmod 777 Aeroporto.sh
 4. ./Aeroporto.sh
+
+Se viene interrotta un esecuzione o il codice non funziona correttamente, eseguire sempre da shell il comando:
+make clean
