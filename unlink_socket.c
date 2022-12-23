@@ -1,6 +1,6 @@
 #include <sys/socket.h>
 #include <sys/un.h>
-#include "richiesta.h"
+#include "notifica.h"
 	
 int main(int argc, char *argv[]){
 	unlink("/tmp/socket_Aereo1");
