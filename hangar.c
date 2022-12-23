@@ -75,5 +75,5 @@ int main(int argc, char *argv[]){
 	notificaFineAerei(fd);
 	
 	close(fd);
-	return 0;
+	exit(0);
 }

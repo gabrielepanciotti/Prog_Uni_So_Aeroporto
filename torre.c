@@ -214,5 +214,5 @@ int main(int argc, char *argv[]){
 	
 	int rc = pthread_mutex_destroy(&mutex);
 	close(fd);
-	return 0;
+	exit(0);
 }

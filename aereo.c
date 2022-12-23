@@ -142,5 +142,5 @@ int main(int argc, char *argv[]){
 	close(sfd);
 	close(cfd);
 	unlink(mysock);
-	return 0;
+	exit(0);
 }
