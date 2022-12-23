@@ -1,0 +1,7 @@
+all: Torre Hangar
+Torre: Torre.c Funzioni_Comuni.c richiesta.h
+	gcc -o Torre Torre.c Funzioni_Comuni.c richiesta.h
+Hangar: Hangar.c Aereo.o Funzioni_Comuni.c richiesta.h
+	gcc -o Hangar Hangar.c Aereo.o Funzioni_Comuni.c richiesta.h
+Aereo.o: Aereo.c Funzioni_Comuni.c richiesta.h
+	gcc -c Aereo.o Aereo.c Funzioni_Comuni.c richiesta.h
