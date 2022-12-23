@@ -3,33 +3,34 @@
 #include "richiesta.h"
 
 //??Condivisa tra processi??
-char nome_processo[] = "Aereo";
 
-int sfd,cfd;
+
+int sfd, cfd;
 
 char sBuffer[MAX_BUFFER_LEN];
 int iBytesRead;
-char* mysock;
+
+char nome_processo[] = "Aereo";
+long num_aereo;
+char mysock[64];
 
 void decolla(int num_pista){
 	int tempo_decollo=get_random(5,15);
 	char *curr_time;
+	printf("====================\n");
 	curr_time=getTime();
 	printf("%s , %s : Inizio decollo aereo \nPista usata: %d \nTempo necessario decollo: %d \n", curr_time, nome_processo, num_pista, tempo_decollo);
 	sleep(tempo_decollo); //Tempo random di decollo
 	
 	//Invia messaggio di decollo avvenuto tramite connessione Socket alla Torre
+	memset(sBuffer, 0, sizeof(sBuffer));
 	strcpy(sBuffer,"Decollo avvenuto");
-	if(write(cfd, sBuffer, strlen(sBuffer)) ==-1)
+	if(write(cfd, sBuffer, strlen("Decollo avvenuto")) ==-1)
 		handle_error("write");
 		
 	curr_time=getTime();
 	printf("%s , %s : Fine decollo aereo \n", curr_time, nome_processo);
-	
-	//Chiude connessione socket e termina processo
-	close(sfd);
-	close(cfd);
-	unlink(mysock);
+	printf("====================\n");
 }
 
 //Ritorna il numero della pista su cui decollare
@@ -39,8 +40,6 @@ int attesaAutorizzazione(){
 	int num_pista = -1;
 	char *curr_time;
 	
-	curr_time=getTime();
-	printf("%s , %s : Attesa autorizzazione decollo da parte della Torre \n", curr_time, nome_processo);
 	//Apre connessione Socket con Torre e si mette in attesa dell'autorizzazione da parte di questa
 	
 	//Apre socket
@@ -48,10 +47,15 @@ int attesaAutorizzazione(){
 		handle_error("socket");
 	
 	//Mette il socket visibile su tmp
-	memset(&sun,'\0',sizeof(sun));
+	sockT = sizeof(sTorre);
 	memset(&sTorre,'\0',sizeof(sTorre));
+	
+	memset(&sun,'\0',sizeof(sun));
 	sun.sun_family = AF_UNIX;
 	strcpy(sun.sun_path, mysock);
+	printf("====================\n");
+	curr_time=getTime();
+	printf("%s , %s : Creazione Socket: %s\n", curr_time, nome_processo, mysock);
 	
 	if((bind(sfd,(struct sockaddr *)&sun, sizeof(sun))) == -1)
 		handle_error("bind");
@@ -64,37 +68,46 @@ int attesaAutorizzazione(){
 	if((cfd = accept(sfd,(struct sockaddr *)&sTorre, &sockT)) == -1)
 		handle_error("accept");
 	
+	curr_time=getTime();
+	printf("%s , %s : Attesa autorizzazione decollo da parte della Torre \n", curr_time, nome_processo);
+	
 	//Si mette in lettura, aspettando l'autorizzazione del decollo da parte di un thread della Torre
 	memset(sBuffer, 0, sizeof(sBuffer));
-	if((iBytesRead = read(cfd, sBuffer, sizeof(sBuffer))) == -1)
+	if((iBytesRead = read(cfd, sBuffer, strlen("Autorizzazione"))) == -1)
 		handle_error("read");
+		
+	curr_time=getTime();
+	printf("%s , %s : %s decollo da parte della Torre \n", curr_time, nome_processo, sBuffer);
 	
 	//Se riceve il messaggio di autorizzazione, si rimette in lettura per leggere su quale pista decollare
 	if(strcmp(sBuffer,"Autorizzazione") == 0){
 		memset(sBuffer, 0, sizeof(sBuffer));
-		if((iBytesRead = read(cfd, sBuffer, sizeof(sBuffer))) == -1)
+		if((iBytesRead = read(cfd, sBuffer, 1)) == -1)
 			handle_error("read");
 		num_pista = atoi(sBuffer);
 	}
+	curr_time=getTime();
+	printf("%s , %s : Numero pista per decollo: %d\n", curr_time, nome_processo, num_pista);
+	printf("====================\n");
 	return num_pista;
 }
 
-void richiestaDecollo(){
+void richiestaDecollo(int fd){
 	//Crea la notifica con il tipo richiesta di decollo e il nome del processo che lo richiede
 	char *curr_time;
-	int fd;
+	
 	struct tNotifica stNotifica;
 	strcpy(stNotifica.id,nome_processo);
 	strcpy(stNotifica.tipo,"richiestaDecollo");
+	stNotifica.num = num_aereo;
 	strcpy(mysock,"/tmp/socket_");
 	strcat(mysock,nome_processo);
-	strcpy(stNotifica.my_sock_path,mysock);
-	
+	strcpy(stNotifica.my_sock_path,mysock);	
 	//Apre la pipe per inviare la notifica
-	fd = open(MYPIPE, O_WRONLY);
+	
 	//Scrive la richiesta nella pipe e la chiude
 	write(fd, &stNotifica , sizeof(stNotifica));
-	close(fd);	
+		
 	
 	curr_time=getTime();	
 	printf("%s , %s : Invio richiesta decollo a torre \n", curr_time, nome_processo);
@@ -106,25 +119,33 @@ void preparazioneAereo(){
 	int tempo_preparazione=get_random(3,8);
 	curr_time=getTime();
 	printf("%s , %s : Inizio preparazione aereo, tempo necessario: %d\n", curr_time, nome_processo, tempo_preparazione);
-	sleep(tempo_preparazione); 
+	sleep(tempo_preparazione);
 }
 
 int main(int argc, char *argv[]){
+	int fd;
 	int num_pista;
-	int num_aereo=atoi(argv[1]);
+	num_aereo=(long)atoi(argv[1]);
 	char *curr_time;
-	
+	fd = open(MYPIPE, O_WRONLY);
 	strcat(nome_processo,argv[1]);
 	curr_time=getTime();
-	printf("%s , %s : Avvio processo aereo numero: %d\n", curr_time, nome_processo, num_aereo);	
+	//printf("%s , %s : Avvio processo aereo numero: %d\n", curr_time, nome_processo, num_aereo);	
 	preparazioneAereo();
-	richiestaDecollo();
+	richiestaDecollo(fd);
 	//La funzione ritorna il numero della pista su cui decollare, -1 se non ha ricevuto l'autorizzazione
-	if( num_pista = attesaAutorizzazione() != -1){
+	num_pista = attesaAutorizzazione();
+	if(num_pista != -1){
     		decolla(num_pista);
 	}
 	else{
 		printf("%s , %s : Decollo non autorizzato \n", curr_time, nome_processo);
 	}
+	
+	//Chiude Pipe, connessione socket e termina processo
+	close(fd);
+	close(sfd);
+	close(cfd);
+	unlink(mysock);
 	exit(0);  
 }

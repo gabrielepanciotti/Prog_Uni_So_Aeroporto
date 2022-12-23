@@ -6,11 +6,11 @@
 #include <string.h>
 #include <fcntl.h>
 
+#define NUM_AEREI 10
+#define NUM_PISTE 2
+
 #ifndef MYHEADER_H_
 #define MYHEADER_H_
-
-char* getTime(); // only put declaration in headers
-int get_random(int min, int max);
 
 #define MYPIPE "/tmp/myfifo"
 #define MY_SOCK_PATH "/tmp/my_socket"
@@ -27,12 +27,15 @@ int get_random(int min, int max);
 
 #endif
 
+char* getTime();
+int get_random(int min, int max);
 
 //Struttura dati per richieste, primo campo per tipo richiesta, secondo per id mittente
 struct tNotifica {
-	char tipo[20];
-	char id[10];
-	char my_sock_path[30];
+	char tipo[32];
+	long num;
+	char id[16];
+	char my_sock_path[32];
 };
 
 
