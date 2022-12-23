@@ -4,3 +4,5 @@ Utilizzo del linguaggio C e comandi Unix per gestione pista di decollagio in un 
 Utilizzo di processi padre/figlio (fork, execv), threads (pthread, mutex), pipe (mkfifo), socket
 
 Descrizione dettagliata progetto in file PDF
+
+Per eseguire scaricare tutto la cartella e avviare Aeroporto.sh
