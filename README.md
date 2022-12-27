@@ -1,6 +1,8 @@
 # Prog_Uni_So_Aeroporto
 Progetto universitario per corso "Sistemi operativi"
+
 Utilizzo del linguaggio C e comandi Unix per gestione piste di decollagio in un Aeroporto.
+
 Utilizzo di processi padre/figlio (fork, execv), threads e memoria condivisa con mutua esclusione in attesa attiva(pthread, mutex, pthread_cond), pipe (mkfifo) e socket
 
 Il programma funziona seguendo questi passi:
